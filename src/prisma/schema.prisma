@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum RoomStatus {
+  WAITING
+  REQUESTING_ACCESS
+  CONNECTED
+}
+
+model Room {
+  roomId           String            @id
+  status           String            @default("WAITING") // SQLite doesn't natively support enums, using string with constraints logic in app
+  extensionEnabled Boolean           @default(true)
+  nowPlaying       String?           // JSON string
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  fingerprints     RoomFingerprint[]
+}
+
+model RoomFingerprint {
+  id        String   @id @default(cuid())
+  roomId    String
+  ip        String?
+  userAgent String?
+  cfCountry String?
+  cfRay     String?
+  createdAt DateTime @default(now())
+
+  room Room @relation(fields: [roomId], references: [roomId], onDelete: Cascade)
+
+  @@index([roomId])
+}

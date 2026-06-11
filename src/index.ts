@@ -1,9 +1,12 @@
-import { Hono } from 'hono'
+import { app } from './server';
+import type { CloudflareBindings } from './types';
 
-const app = new Hono()
-
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
-export default app
+export default {
+  async fetch(
+    request: Request,
+    env: CloudflareBindings,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
+    return app.fetch(request, env, ctx);
+  },
+};

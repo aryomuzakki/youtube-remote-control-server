@@ -1,16 +1,37 @@
 {
   "name": "ytrc-server",
   "type": "module",
-  "version": "v0.0.0",
+  "version": "0.1.0",
+  "private": true,
+  "prisma": {
+    "schema": "./src/prisma/schema.prisma"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:generate": "prisma generate --schema=./src/prisma/schema.prisma",
+    "db:migrate:new": "prisma migrate diff --from-empty --to-schema ./src/prisma/schema.prisma --script > ./migrations/migration.sql",
+    "db:migrate:local": "wrangler d1 migrations apply ytrc-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply ytrc-db --remote",
+    "db:studio": "prisma studio --schema=./src/prisma/schema.prisma",
+    "lint": "biome lint --write ./src",
+    "format": "biome format --write ./src",
+    "check": "biome check ./src"
   },
   "dependencies": {
-    "hono": "^4.12.25"
+    "@hono/swagger-ui": "^0.6.1",
+    "@prisma/adapter-d1": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "hono": "^4.12.25",
+    "swagger-jsdoc": "^6.3.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "prisma": "^7.8.0",
     "wrangler": "^4.4.0"
   }
 }
