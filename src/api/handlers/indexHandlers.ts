@@ -3,7 +3,7 @@ import { createPrismaClient } from '../../services/database';
 import type { CloudflareBindings } from '../../types';
 
 export const healthHandler = (c: Context) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() }, 200);
 };
 
 export const testDBHandler = async (
@@ -13,7 +13,7 @@ export const testDBHandler = async (
     const prisma = createPrismaClient(c.env.DB);
     // Execute a simple query to check connection
     await prisma.$queryRaw`SELECT 1`;
-    return c.json({ status: 'connected', timestamp: new Date().toISOString() });
+    return c.json({ status: 'connected', timestamp: new Date().toISOString() }, 200);
   } catch (error) {
     console.error('Database connection test failed:', error);
     return c.json(

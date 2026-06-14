@@ -21,7 +21,25 @@ export const createRoomHandler = async (
   const cfCountry = c.req.header('cf-ipcountry');
   const cfRay = c.req.header('cf-ray');
 
-  const roomId = generateRoomId();
+  let requestedRoomId: string | undefined;
+  try {
+    const body = await c.req.json();
+    if (body && typeof body.roomId === 'string' && body.roomId.trim().length > 0) {
+      requestedRoomId = body.roomId.trim();
+    }
+  } catch (e) {
+    // Ignore JSON parse error if body is empty
+  }
+
+  const roomId = requestedRoomId || generateRoomId();
+
+  // Check if custom room already exists to avoid unique constraint error
+  if (requestedRoomId) {
+    const existing = await prisma.room.findUnique({ where: { roomId } });
+    if (existing) {
+      return c.json({ message: 'Room already exists', roomId: existing.roomId }, 409);
+    }
+  }
 
   await prisma.$transaction([
     prisma.room.create({
@@ -81,4 +99,53 @@ export const getRoomHandler = async (
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
   });
+};
+
+const updateRoomBodySchema = z.object({
+  extensionEnabled: z.boolean().optional(),
+});
+
+export const updateRoomHandler = async (
+  c: Context<{ Bindings: CloudflareBindings }>,
+) => {
+  const prisma = createPrismaClient(c.env.DB);
+  const { roomId } = getRoomParamsSchema.parse(c.req.param());
+  
+  let body;
+  try {
+    body = await c.req.json();
+  } catch (e) {
+    return c.json({ message: 'Invalid JSON body' }, 400);
+  }
+
+  const parsedBody = updateRoomBodySchema.safeParse(body);
+  if (!parsedBody.success) {
+    return c.json({ message: 'Invalid body parameters' }, 400);
+  }
+
+  const dataToUpdate: any = {};
+  if (parsedBody.data.extensionEnabled !== undefined) {
+    dataToUpdate.extensionEnabled = parsedBody.data.extensionEnabled;
+  }
+
+  if (Object.keys(dataToUpdate).length === 0) {
+    return c.json({ message: 'No valid fields to update' }, 400);
+  }
+
+  try {
+    const updatedRoom = await prisma.room.update({
+      where: { roomId },
+      data: dataToUpdate,
+    });
+    return c.json({
+      roomId: updatedRoom.roomId,
+      status: updatedRoom.status,
+      extensionEnabled: updatedRoom.extensionEnabled,
+    });
+  } catch (e: any) {
+    if (e.code === 'P2025') {
+      return c.json({ message: 'Room not found' }, 404);
+    }
+    return c.json({ message: 'Failed to update room' }, 500);
+  }
 };
